@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cobra Realista Tech</title>
+<style>
+  body { margin:0; display:flex; justify-content:center; align-items:center; height:100vh; background:#0a0a23; }
+  canvas { border:3px solid #444; border-radius:12px; background:#111; }
+</style>
+</head>
+<body>
+
+<canvas id="game" width="600" height="400"></canvas>
+
+<!-- Sons -->
+<audio id="eatSound" src="https://freesound.org/data/previews/341/341695_3248244-lq.mp3"></audio>
+<audio id="gameOverSound" src="https://freesound.org/data/previews/331/331912_3248244-lq.mp3"></audio>
+<audio id="bgMusic" src="https://freesound.org/data/previews/435/435640_5121236-lq.mp3" loop></audio>
+
+<script>
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d');
+const foodEmojis=['💻','🖥️','🖱️','⌨️','🖨️'];
+let snake=[], food, score=0, speed=2, dir={x:1,y:0}, targetDir={x:1,y:0};
+let eatSound=document.getElementById('eatSound');
+let gameOverSound=document.getElementById('gameOverSound');
+let bgMusic=document.getElementById('bgMusic');
+
+const SEGMENTS=20; // número de segmentos do corpo
+
+function init(){
+  snake=[];
+  const startX=canvas.width/2;
+  const startY=canvas.height/2;
+  for(let i=0;i<SEGMENTS;i++){
+    snake.push({x:startX-i*10, y:startY});
+  }
+  placeFood();
+  score=0;
+  bgMusic.currentTime=0; bgMusic.play();
+  requestAnimationFrame(loop);
+}
+
+function placeFood(){
+  food={
+    x:Math.random()*(canvas.width-20)+10,
+    y:Math.random()*(canvas.height-20)+10,
+    emoji:foodEmojis[Math.floor(Math.random()*foodEmojis.length)]
+  };
+}
+
+function loop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // Movimento da cabeça em direção à comida
+  let head=snake[0];
+  let dx=food.x-head.x;
+  let dy=food.y-head.y;
+  let dist=Math.sqrt(dx*dx+dy*dy);
+  let vx=(dx/dist)*speed;
+  let vy=(dy/dist)*speed;
+  head.x+=vx; head.y+=vy;
+
+  // Atualizar segmentos do corpo
+  for(let i=1;i<snake.length;i++){
+    let seg=snake[i];
+    let prev=snake[i-1];
+    let dx=prev.x-seg.x;
+    let dy=prev.y-seg.y;
+    let d=Math.sqrt(dx*dx+dy*dy);
+    if(d>10){
+      seg.x+=dx*0.2;
+      seg.y+=dy*0.2;
+    }
+  }
+
+  // Desenhar cobra
+  for(let i=snake.length-1;i>=0;i--){
+    const s=snake[i];
+    const hue=(i*20)%360;
+    ctx.fillStyle=`hsl(${hue},80%,50%)`;
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,8,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  // Cabeça destacada
+  ctx.beginPath();
+  ctx.arc(head.x, head.y, 10,0,Math.PI*2);
+  ctx.fillStyle="#fff";
+  ctx.fill();
+
+  // Desenhar comida
+  ctx.font="20px Arial";
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+  ctx.fillText(food.emoji, food.x, food.y);
+
+  // Colisão comida
+  if(dist<15){
+    eatSound.currentTime=0; eatSound.play();
+    score++;
+    snake.push({x:snake[snake.length-1].x, y:snake[snake.length-1].y});
+    placeFood();
+    // Aumenta velocidade
+    if(score%3===0) speed+=0.5;
+  }
+
+  // Colisão com parede
+  if(head.x<0||head.x>canvas.width||head.y<0||head.y>canvas.height){
+    gameOver();
+    return;
+  }
+
+  requestAnimationFrame(loop);
+}
+
+function gameOver(){
+  gameOverSound.currentTime=0; gameOverSound.play();
+  bgMusic.pause();
+  alert("💥 Game Over! Score: "+score);
+  init();
+}
+
+init();
+</script>
+
+</body>
+</html>

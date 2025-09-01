@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🐍 Cobrinha Tech Colorida</title>
+<style>
+  body {
+    margin:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    background: #0a0a23;
+    color: #fff;
+    font-family: sans-serif;
+  }
+  h1 { margin:10px 0; text-align:center; }
+  canvas {
+    background:#111;
+    margin-top:10px;
+    display:block;
+    border:3px solid #444;
+    border-radius:12px;
+  }
+  #score, #highScore { margin-top:5px; font-size:18px; }
+</style>
+</head>
+<body>
+
+<h1>🐍 Cobrinha Tech Colorida</h1>
+<canvas id="game" width="500" height="500"></canvas>
+<div id="score">Score: 0</div>
+<div id="highScore">Recorde: 0</div>
+
+<!-- Sons -->
+<audio id="eatSound" src="https://freesound.org/data/previews/341/341695_3248244-lq.mp3"></audio>
+<audio id="gameOverSound" src="https://freesound.org/data/previews/331/331912_3248244-lq.mp3"></audio>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const TILE = 25;
+const COLS = canvas.width / TILE;
+const ROWS = canvas.height / TILE;
+
+let snake, dir, nextDir, food, score, gameInterval, highScore = 0;
+
+// Emojis de computadores variados
+const foodEmojis = ['💻','🖥️','🖱️','⌨️','🖨️'];
+
+// Sons
+const eatSound = document.getElementById('eatSound');
+const gameOverSound = document.getElementById('gameOverSound');
+
+function resetGame() {
+  snake = [{x:10, y:10}, {x:9, y:10}, {x:8, y:10}];
+  dir = {x:1, y:0};
+  nextDir = {...dir};
+  score = 0;
+  document.getElementById('score').innerText = 'Score: 0';
+  document.getElementById('highScore').innerText = 'Recorde: ' + highScore;
+  placeFood();
+  if (gameInterval) clearInterval(gameInterval);
+  gameInterval = setInterval(gameLoop, 120);
+}
+
+function placeFood() {
+  do {
+    food = { 
+      x: Math.floor(Math.random()*COLS), 
+      y: Math.floor(Math.random()*ROWS),
+      emoji: foodEmojis[Math.floor(Math.random()*foodEmojis.length)]
+    };
+  } while(snake.some(p => p.x===food.x && p.y===food.y));
+}
+
+function gameLoop() {
+  dir = nextDir;
+  const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+  // Colisão com parede
+  if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS) { gameOver(); return; }
+
+  // Colisão com corpo
+  if(snake.some(s=>s.x===head.x && s.y===head.y)) { gameOver(); return; }
+
+  snake.unshift(head);
+
+  // Comer comida
+  if(head.x===food.x && head.y===food.y){
+    score++;
+    document.getElementById('score').innerText = 'Score: ' + score;
+    eatSound.currentTime = 0; eatSound.play();
+    placeFood();
+
+    // Atualizar recorde
+    if(score > highScore){
+      highScore = score;
+      document.getElementById('highScore').innerText = 'Recorde: ' + highScore;
+    }
+
+  } else {
+    snake.pop();
+  }
+
+  draw();
+}
+
+function gameOver() {
+  gameOverSound.currentTime = 0; 
+  gameOverSound.play();
+  alert('💥 Game Over! Seu score: ' + score);
+  resetGame();
+}
+
+function draw() {
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Cobra colorida com gradiente
+  snake.forEach((s,i)=>{
+    const gradient = ctx.createLinearGradient(s.x*TILE, s.y*TILE, (s.x+1)*TILE, (s.y+1)*TILE);
+    gradient.addColorStop(0, `hsl(${i*20}, 70%, 50%)`);
+    gradient.addColorStop(1, `hsl(${i*20 + 30}, 70%, 60%)`);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(s.x*TILE, s.y*TILE, TILE-1, TILE-1);
+  });
+
+  // Comida
+  ctx.font = TILE+'px Arial';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(food.emoji, food.x*TILE+TILE/2, food.y*TILE+TILE/2);
+}
+
+// Controles
+window.addEventListener('keydown', e=>{
+  const k=e.key;
+  if(k==='ArrowUp' && dir.y!==1) nextDir={x:0,y:-1};
+  if(k==='ArrowDown' && dir.y!==-1) nextDir={x:0,y:1};
+  if(k==='ArrowLeft' && dir.x!==1) nextDir={x:-1,y:0};
+  if(k==='ArrowRight' && dir.x!==-1) nextDir={x:1,y:0};
+});
+
+// Reiniciar ao clicar na tela
+canvas.addEventListener('click', resetGame);
+
+resetGame();
+</script>
+
+</body>
+</html>
